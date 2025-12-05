@@ -11,12 +11,16 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-// --- 1. OWNER DASHBOARD (PREMIUM UI) ---
+// --- 1. OWNER DASHBOARD (LENGKAP) ---
 const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ id: '', nomor: '', pw: '', key: '' });
   const [isEditing, setIsEditing] = useState(false);
+  
+  // State Ganti Password Owner
+  const [ownerPw, setOwnerPw] = useState('');
+  const [updatingOwner, setUpdatingOwner] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -54,6 +58,18 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleUpdateOwnerPw = async () => {
+    if (!ownerPw) return;
+    setUpdatingOwner(true);
+    try {
+      const { error } = await supabase.from('profiles').update({ pw: ownerPw }).eq('id', user.id);
+      if (error && isSupabaseConfigured()) throw error;
+      alert('Password Owner berhasil diubah!');
+      setOwnerPw('');
+    } catch (err: any) { alert('Gagal update: ' + err.message); }
+    finally { setUpdatingOwner(false); }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
       <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
@@ -70,24 +86,43 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form Card */}
-        <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-400" /> {isEditing ? 'Edit User' : 'Buat User Baru'}
-          </h2>
-          <form onSubmit={handleSubmitUser} className="space-y-4">
-            <Input label="Nomor Bot (Login ID)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
-            <Input label="Password User" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="password..." required />
-            <Input label="Manual Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Kosongkan jika auto..." />
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" className="w-full shadow-lg shadow-indigo-500/20">{isEditing ? 'Simpan Perubahan' : 'Tambah User'}</Button>
-              {isEditing && <Button type="button" variant="secondary" onClick={() => { setIsEditing(false); setFormData({id:'',nomor:'',pw:'',key:''}); }}>Batal</Button>}
-            </div>
-          </form>
+        {/* KOLOM KIRI: FORM USER & GANTI PASSWORD */}
+        <div className="lg:col-span-1 space-y-8">
+          
+          {/* Form Manage User */}
+          <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-400" /> {isEditing ? 'Edit User' : 'Buat User Baru'}
+            </h2>
+            <form onSubmit={handleSubmitUser} className="space-y-4">
+              <Input label="Nomor Bot (Login ID)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
+              <Input label="Password User" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="password..." required />
+              <Input label="Manual Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Kosongkan jika auto..." />
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full shadow-lg shadow-indigo-500/20">{isEditing ? 'Simpan Perubahan' : 'Tambah User'}</Button>
+                {isEditing && <Button type="button" variant="secondary" onClick={() => { setIsEditing(false); setFormData({id:'',nomor:'',pw:'',key:''}); }}>Batal</Button>}
+              </div>
+            </form>
+          </div>
+
+          {/* Form Ganti Password Owner (INI YANG DIKEMBALIKAN) */}
+          <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
+             <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -z-10"></div>
+             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+               <Settings className="w-5 h-5 text-emerald-400" /> Admin Settings
+             </h2>
+             <div className="space-y-4">
+               <Input label="Ganti Password Owner" type="text" value={ownerPw} onChange={(e) => setOwnerPw(e.target.value)} placeholder="Password Baru..." />
+               <Button onClick={handleUpdateOwnerPw} isLoading={updatingOwner} className="w-full bg-slate-700 hover:bg-slate-600" disabled={!ownerPw}>
+                 <Save className="w-4 h-4 mr-2" /> Simpan Password Baru
+               </Button>
+             </div>
+          </div>
+
         </div>
 
-        {/* List Card */}
+        {/* KOLOM KANAN: LIST USER */}
         <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col h-full">
           <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
             <h2 className="text-lg font-semibold text-slate-200">Daftar User Aktif</h2>
@@ -222,7 +257,7 @@ const App: React.FC = () => {
         else q = q.eq('nomor', loginId).eq('pw', password);
         const { data, error } = await q.maybeSingle();
         if (error) throw error;
-        // --- FIX SYNTAX ADA DISINI ---
+        // --- FIX SYNTAX ---
         if (!data) throw new Error(loginMode === 'owner' ? "Password Owner salah." : "Login gagal, cek Nomor/Password.");
         userFound = data as Profile;
       }
@@ -240,7 +275,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-      {/* BACKGROUND ABSTRAK KEREN */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/20 rounded-full blur-[120px] animate-pulse"></div>
@@ -280,7 +314,7 @@ const App: React.FC = () => {
         </form>
       </div>
       
-      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v1.2.0</p>
+      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v1.3.0</p>
     </div>
   );
 };
