@@ -731,7 +731,7 @@ const App: React.FC = () => {
            throw error; // Lempar error agar ditangkap catch block
         }
         if (!data) {
-           throw new Error(loginMode === 'owner' ? "Password Owner salah." : "Login gagal.");
+           throw new Error(loginMode === 'owner' ? "Password Owner salah.");
         }
         
         userFound = data as Profile;
@@ -775,7 +775,7 @@ const App: React.FC = () => {
 
         <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-8 z-10">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-white mb-2">BotCommand Center</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">Security FuxxyMD</h1>
             <p className="text-slate-400 text-sm">Silakan pilih tipe login Anda</p>
           </div>
 
