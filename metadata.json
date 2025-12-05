@@ -1,0 +1,5 @@
+{
+  "name": "BotCommand Center",
+  "description": "A dual-role dashboard for Bot Owners and Users managed via Supabase, featuring AI-assisted key generation.",
+  "requestFramePermissions": []
+}
