@@ -731,7 +731,7 @@ const App: React.FC = () => {
            throw error; // Lempar error agar ditangkap catch block
         }
         if (!data) {
-           throw new Error(loginMode === 'owner' ? "Password Owner salah.");
+           throw new Error(loginMode === 'owner' ? "Password Owner salah." : "Login gagal.");
         }
         
         userFound = data as Profile;
