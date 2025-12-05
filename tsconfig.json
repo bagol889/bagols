@@ -10,11 +10,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": false
+    "strict": false
   },
-  "include": ["src"],
+  "include": ["."],
   "exclude": ["node_modules"]
 }
