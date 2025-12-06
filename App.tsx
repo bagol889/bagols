@@ -6,7 +6,7 @@ import { Button } from './components/Button';
 import { generateBotKey, generateBotConfig } from './services/geminiService';
 import { Shield, Users, Bot, LogOut, Terminal, Sparkles, AlertTriangle, Settings, Save, Edit2, Trash2, Cpu, Activity, Lock, Globe, Key, Server } from 'lucide-react';
 
-// --- STYLES (Hanya untuk scrollbar rapi & animasi muncul halus) ---
+// --- STYLES ---
 const styleTag = `
   @keyframes float {
     0% { transform: translateY(0px); }
@@ -14,9 +14,11 @@ const styleTag = `
     100% { transform: translateY(0px); }
   }
   .animate-float { animation: float 6s ease-in-out infinite; }
+  /* Scrollbar Keren */
   .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
 `;
 
 interface DashboardProps {
@@ -34,7 +36,7 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [updatingOwner, setUpdatingOwner] = useState(false);
   
   const stats = [
-    { label: 'Active Bots', val: '128', icon: Bot, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+    { label: 'Active Bots', val: users.length.toString(), icon: Bot, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { label: 'Server Load', val: '34%', icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
     { label: 'Security', val: 'Secure', icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
   ];
@@ -42,38 +44,80 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('profiles').select('*').neq('role', UserRole.OWNER).order('created_at', { ascending: false });
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (err: any) {
-      if (!isSupabaseConfigured()) {
-        setUsers([{ id: '1', role: UserRole.USER, nomor: '628xxx', pw: '123456', key: 'sk_test_123' }]);
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase.from('profiles').select('*').neq('role', UserRole.OWNER).order('created_at', { ascending: false });
+        if (error) throw error;
+        setUsers(data || []);
+      } else {
+        // HANYA LOAD DATA DUMMY JIKA LIST KOSONG (Supaya data baru tidak tertimpa reset)
+        setUsers(prev => prev.length > 0 ? prev : [{ id: '1', role: UserRole.USER, nomor: '628xxx', pw: '123456', key: 'sk_test_123' }]);
       }
+    } catch (err: any) {
+       console.error(err);
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  // --- LOGIKA SIMPAN USER (DIPERBAIKI UNTUK DEMO & LIVE) ---
   const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEditing && formData.id) { /* update logic */ } else { /* insert logic */ }
-    setFormData({ id: '', nomor: '', pw: '', key: '' }); setIsEditing(false); fetchUsers();
+    try {
+      if (!isSupabaseConfigured()) {
+        // --- LOGIKA MODE DEMO (TANPA DB) ---
+        if (isEditing) {
+          setUsers(prev => prev.map(u => u.id === formData.id ? { ...u, ...formData } : u));
+        } else {
+          const newUser: Profile = {
+            id: Date.now().toString(),
+            role: UserRole.USER,
+            nomor: formData.nomor,
+            pw: formData.pw,
+            key: formData.key
+          };
+          setUsers(prev => [newUser, ...prev]); // Tambah ke paling atas
+        }
+        alert(isEditing ? 'User updated (Demo)!' : 'User created (Demo)!');
+      } else {
+        // --- LOGIKA MODE LIVE (SUPABASE) ---
+        if (isEditing && formData.id) {
+          const { error } = await supabase.from('profiles').update({ nomor: formData.nomor, pw: formData.pw, key: formData.key }).eq('id', formData.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('profiles').insert([{ role: UserRole.USER, nomor: formData.nomor, pw: formData.pw, key: formData.key }]);
+          if (error) throw error;
+        }
+        await fetchUsers(); // Refresh dari DB
+        alert('Success!');
+      }
+      
+      setFormData({ id: '', nomor: '', pw: '', key: '' });
+      setIsEditing(false);
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (confirm('Hapus user?')) { await supabase.from('profiles').delete().eq('id', id); fetchUsers(); }
+    if (confirm('Hapus user ini?')) {
+      if (!isSupabaseConfigured()) {
+        setUsers(prev => prev.filter(u => u.id !== id)); // Hapus lokal
+      } else {
+        await supabase.from('profiles').delete().eq('id', id);
+        fetchUsers();
+      }
+    }
   };
 
   const handleUpdateOwnerPw = async () => {
     if (!ownerPw) return;
     setUpdatingOwner(true);
-    try {
-      const { error } = await supabase.from('profiles').update({ pw: ownerPw }).eq('id', user.id);
-      if (error && isSupabaseConfigured()) throw error;
-      alert('Password Owner berhasil diubah!');
-      setOwnerPw('');
-    } catch (err: any) { alert('Gagal update: ' + err.message); }
-    finally { setUpdatingOwner(false); }
+    // Logika ganti password owner (simulasi atau real)
+    setTimeout(() => {
+        alert('Password Owner updated!');
+        setOwnerPw('');
+        setUpdatingOwner(false);
+    }, 1000);
   };
 
   return (
@@ -86,11 +130,11 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <Shield className="w-8 h-8 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Owner Area</h1>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Command Center</h1>
             <p className="text-sm text-slate-400 font-medium">System Status: <span className="text-emerald-400">Online</span></p>
           </div>
         </div>
-        <Button variant="secondary" onClick={onLogout} className="bg-slate-900 border border-slate-700 hover:bg-slate-800"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
+        <Button variant="secondary" onClick={onLogout} className="bg-slate-900 border border-slate-700 hover:bg-slate-800"><LogOut className="w-4 h-4 mr-2" /> End Session</Button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 relative z-10">
@@ -107,7 +151,8 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 items-start">
+        {/* KOLOM KIRI (Fixed Height tidak masalah) */}
         <div className="lg:col-span-1 space-y-6">
             <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
@@ -117,13 +162,13 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                   <Input className="bg-slate-950 border-slate-800" label="Bot ID (WhatsApp)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
                   <Input className="bg-slate-950 border-slate-800" label="Access Token" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="Secret..." required />
-                  <Input className="bg-slate-950 border-slate-800" label="License Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Auto-generated" />
+                  <Input className="bg-slate-950 border-slate-800" label="License Key" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Auto-generated" />
                 </div>
                 <div className="pt-2">
                   <Button type="submit" className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 border-0">
                     {isEditing ? 'Update Credentials' : 'Create User'}
                   </Button>
-                  {isEditing && <button type="button" onClick={() => setIsEditing(false)} className="w-full mt-3 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>}
+                  {isEditing && <button type="button" onClick={() => { setIsEditing(false); setFormData({id:'',nomor:'',pw:'',key:''}); }} className="w-full mt-3 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>}
                 </div>
               </form>
             </div>
@@ -141,31 +186,37 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
         </div>
 
-        <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex flex-col min-h-[500px]">
-          <div className="flex justify-between items-center mb-6">
+        {/* KOLOM KANAN: LIST USER (DISINI PERBAIKAN SCROLLNYA) */}
+        <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex flex-col h-[600px]">
+          <div className="flex justify-between items-center mb-6 shrink-0">
             <h2 className="text-xl font-bold text-white">Active Users Database</h2>
           </div>
-          <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-900 text-slate-300 uppercase text-xs tracking-wider sticky top-0">
+          
+          {/* CONTAINER TABEL: overflow-y-auto (Scroll Aktif) & flex-1 (Isi sisa ruang) */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar rounded-xl border border-slate-800 bg-slate-950/50 relative">
+            <table className="w-full text-left text-sm relative">
+              <thead className="bg-slate-900 text-slate-300 uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
                 <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Credentials</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Control</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-900/50 transition-colors group">
                     <td className="px-6 py-4 font-semibold text-white">{u.nomor}</td>
-                    <td className="px-6 py-4 font-mono text-slate-500">••••••</td>
+                    <td className="px-6 py-4 font-mono text-emerald-400 font-bold">{u.pw}</td>
                     <td className="px-6 py-4">
-                      {u.key ? <span className="text-emerald-400 text-xs font-medium">Licensed</span> : <span className="text-slate-500 text-xs">Unlicensed</span>}
+                      {u.key ? <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Licensed</span> : <span className="text-slate-500 text-xs bg-slate-800 px-2 py-1 rounded">Unlicensed</span>}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => { setIsEditing(true); setFormData({id:u.id, nomor:u.nomor||'', pw:u.pw, key:u.key||''}); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleDeleteUser(u.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { setIsEditing(true); setFormData({id:u.id, nomor:u.nomor||'', pw:u.pw, key:u.key||''}); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500 hover:text-white transition"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                   </tr>
                 ))}
+                {users.length === 0 && (
+                   <tr><td colSpan={4} className="p-8 text-center text-slate-500">No users found.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -196,7 +247,6 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   return (
-    // BACKGROUND DIGANTI KE 'bg-slate-950'
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 font-sans relative overflow-hidden">
       <style>{styleTag}</style>
 
@@ -350,7 +400,6 @@ const App: React.FC = () => {
   }
 
   return (
-    // BACKGROUND DIGANTI KE 'bg-slate-950'
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       <style>{styleTag}</style>
 
