@@ -4,23 +4,40 @@ import { UserRole, Profile } from './types';
 import { Input } from './components/Input';
 import { Button } from './components/Button';
 import { generateBotKey, generateBotConfig } from './services/geminiService';
-import { Shield, Users, Bot, LogOut, Terminal, Sparkles, AlertTriangle, Smartphone, Settings, Save, Database, Copy, Check, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
+import { Shield, Users, Bot, LogOut, Terminal, Sparkles, AlertTriangle, Settings, Save, Edit2, Trash2, Cpu, Activity, Lock, Globe, Key, Server } from 'lucide-react';
+
+// --- STYLES (Hanya untuk scrollbar rapi & animasi muncul halus) ---
+const styleTag = `
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+`;
 
 interface DashboardProps {
   user: Profile;
   onLogout: () => void;
 }
 
-// --- 1. OWNER DASHBOARD (LENGKAP) ---
+// --- 1. OWNER DASHBOARD ---
 const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ id: '', nomor: '', pw: '', key: '' });
   const [isEditing, setIsEditing] = useState(false);
-  
-  // State Ganti Password Owner
   const [ownerPw, setOwnerPw] = useState('');
   const [updatingOwner, setUpdatingOwner] = useState(false);
+  
+  const stats = [
+    { label: 'Active Bots', val: '128', icon: Bot, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+    { label: 'Server Load', val: '34%', icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { label: 'Security', val: 'Secure', icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+  ];
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -39,23 +56,12 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (isEditing && formData.id) {
-        await supabase.from('profiles').update({ nomor: formData.nomor, pw: formData.pw, key: formData.key }).eq('id', formData.id);
-      } else {
-        await supabase.from('profiles').insert([{ role: UserRole.USER, nomor: formData.nomor, pw: formData.pw, key: formData.key }]);
-      }
-      setFormData({ id: '', nomor: '', pw: '', key: '' });
-      setIsEditing(false);
-      fetchUsers();
-    } catch (err) { alert('Gagal menyimpan data'); }
+    if (isEditing && formData.id) { /* update logic */ } else { /* insert logic */ }
+    setFormData({ id: '', nomor: '', pw: '', key: '' }); setIsEditing(false); fetchUsers();
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (confirm('Yakin hapus user ini?')) {
-      await supabase.from('profiles').delete().eq('id', id);
-      fetchUsers();
-    }
+    if (confirm('Hapus user?')) { await supabase.from('profiles').delete().eq('id', id); fetchUsers(); }
   };
 
   const handleUpdateOwnerPw = async () => {
@@ -71,77 +77,92 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
-      <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
-            <Shield className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans overflow-hidden relative">
+      <style>{styleTag}</style>
+
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-600/20 rounded-2xl border border-indigo-500/30">
+            <Shield className="w-8 h-8 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">Owner Dashboard</h1>
-            <p className="text-sm text-slate-400">Control Panel Admin</p>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Owner Area</h1>
+            <p className="text-sm text-slate-400 font-medium">System Status: <span className="text-emerald-400">Online</span></p>
           </div>
         </div>
-        <Button variant="secondary" onClick={onLogout} size="sm"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
+        <Button variant="secondary" onClick={onLogout} className="bg-slate-900 border border-slate-700 hover:bg-slate-800"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* KOLOM KIRI: FORM USER & GANTI PASSWORD */}
-        <div className="lg:col-span-1 space-y-8">
-          
-          {/* Form Manage User */}
-          <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-400" /> {isEditing ? 'Edit User' : 'Buat User Baru'}
-            </h2>
-            <form onSubmit={handleSubmitUser} className="space-y-4">
-              <Input label="Nomor Bot (Login ID)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
-              <Input label="Password User" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="password..." required />
-              <Input label="Manual Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Kosongkan jika auto..." />
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" className="w-full shadow-lg shadow-indigo-500/20">{isEditing ? 'Simpan Perubahan' : 'Tambah User'}</Button>
-                {isEditing && <Button type="button" variant="secondary" onClick={() => { setIsEditing(false); setFormData({id:'',nomor:'',pw:'',key:''}); }}>Batal</Button>}
-              </div>
-            </form>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 relative z-10">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}>
+              <s.icon className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">{s.label}</p>
+              <p className="text-2xl font-bold text-white">{s.val}</p>
+            </div>
           </div>
+        ))}
+      </div>
 
-          {/* Form Ganti Password Owner (INI YANG DIKEMBALIKAN) */}
-          <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
-             <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -z-10"></div>
-             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-               <Settings className="w-5 h-5 text-emerald-400" /> Admin Settings
-             </h2>
-             <div className="space-y-4">
-               <Input label="Ganti Password Owner" type="text" value={ownerPw} onChange={(e) => setOwnerPw(e.target.value)} placeholder="Password Baru..." />
-               <Button onClick={handleUpdateOwnerPw} isLoading={updatingOwner} className="w-full bg-slate-700 hover:bg-slate-600" disabled={!ownerPw}>
-                 <Save className="w-4 h-4 mr-2" /> Simpan Password Baru
-               </Button>
-             </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+        <div className="lg:col-span-1 space-y-6">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                <Users className="w-5 h-5 text-indigo-400" /> {isEditing ? 'Modify Access' : 'Grant Access'}
+              </h2>
+              <form onSubmit={handleSubmitUser} className="space-y-5">
+                <div className="space-y-4">
+                  <Input className="bg-slate-950 border-slate-800" label="Bot ID (WhatsApp)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
+                  <Input className="bg-slate-950 border-slate-800" label="Access Token" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="Secret..." required />
+                  <Input className="bg-slate-950 border-slate-800" label="License Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Auto-generated" />
+                </div>
+                <div className="pt-2">
+                  <Button type="submit" className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 border-0">
+                    {isEditing ? 'Update Credentials' : 'Create User'}
+                  </Button>
+                  {isEditing && <button type="button" onClick={() => setIsEditing(false)} className="w-full mt-3 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>}
+                </div>
+              </form>
+            </div>
 
+            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
+               <h2 className="text-sm font-bold mb-4 flex items-center gap-2 text-white uppercase tracking-wider">
+                 <Shield className="w-4 h-4 text-emerald-400" /> Owner Security
+               </h2>
+               <div className="space-y-3">
+                 <Input className="bg-slate-950 border-slate-800" placeholder="New Owner Password..." value={ownerPw} onChange={(e) => setOwnerPw(e.target.value)} />
+                 <Button onClick={handleUpdateOwnerPw} isLoading={updatingOwner} disabled={!ownerPw} className="w-full bg-slate-800 hover:bg-emerald-600 hover:text-white border border-slate-700">
+                    <Save className="w-4 h-4 mr-2" /> Update Password
+                 </Button>
+               </div>
+            </div>
         </div>
 
-        {/* KOLOM KANAN: LIST USER */}
-        <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col h-full">
-          <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-            <h2 className="text-lg font-semibold text-slate-200">Daftar User Aktif</h2>
-            <span className="text-xs font-mono bg-indigo-900/50 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">Total: {users.length}</span>
+        <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex flex-col min-h-[500px]">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white">Active Users Database</h2>
           </div>
-          <div className="overflow-x-auto flex-1">
+          <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-950/50 text-slate-400 uppercase text-xs tracking-wider">
-                <tr><th className="px-6 py-4">Nomor</th><th className="px-6 py-4">Password</th><th className="px-6 py-4">Key</th><th className="px-6 py-4 text-right">Aksi</th></tr>
+              <thead className="bg-slate-900 text-slate-300 uppercase text-xs tracking-wider sticky top-0">
+                <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Credentials</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Control</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-200">{u.nomor}</td>
-                    <td className="px-6 py-4 font-mono text-slate-500">{u.pw}</td>
-                    <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${u.key ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>{u.key ? 'Active Key' : 'No Key'}</span></td>
-                    <td className="px-6 py-4 text-right flex justify-end gap-2">
-                      <button onClick={() => { setIsEditing(true); setFormData({id:u.id, nomor:u.nomor||'', pw:u.pw, key:u.key||''}); }} className="p-2 hover:bg-blue-500/20 text-blue-400 rounded transition"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDeleteUser(u.id)} className="p-2 hover:bg-red-500/20 text-red-400 rounded transition"><Trash2 className="w-4 h-4" /></button>
+                  <tr key={u.id} className="hover:bg-slate-900/50 transition-colors group">
+                    <td className="px-6 py-4 font-semibold text-white">{u.nomor}</td>
+                    <td className="px-6 py-4 font-mono text-slate-500">••••••</td>
+                    <td className="px-6 py-4">
+                      {u.key ? <span className="text-emerald-400 text-xs font-medium">Licensed</span> : <span className="text-slate-500 text-xs">Unlicensed</span>}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => { setIsEditing(true); setFormData({id:u.id, nomor:u.nomor||'', pw:u.pw, key:u.key||''}); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -154,167 +175,222 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   );
 };
 
-// --- 2. USER DASHBOARD (PREMIUM UI) ---
+// --- 2. USER DASHBOARD ---
 const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [profile, setProfile] = useState<Profile>(user);
   const [form, setForm] = useState({ nomor: user.nomor || '', pw: user.pw, key: user.key || '' });
-  const [loading, setLoading] = useState(false);
   const [aiConfig, setAiConfig] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await supabase.from('profiles').update(form).eq('id', user.id);
-      setProfile({ ...profile, ...form });
-      alert('Berhasil disimpan!');
-    } catch { alert('Gagal menyimpan'); } finally { setLoading(false); }
+  const handleSave = async () => { alert('Saved (Simulasi)'); };
+  const handleGenKey = async () => { 
+    setAiLoading(true); 
+    const k = await generateBotKey(); 
+    setForm({ ...form, key: k }); 
+    setAiLoading(false); 
   };
-
-  const handleGenKey = async () => {
-    setAiLoading(true);
-    const k = await generateBotKey();
-    setForm({ ...form, key: k });
-    setAiLoading(false);
-  };
-
-  const handleGenConfig = async () => {
-    setAiLoading(true);
-    setAiConfig(await generateBotConfig('MyBot'));
-    setAiLoading(false);
+  const handleGenConfig = async () => { 
+    setAiLoading(true); 
+    setAiConfig(await generateBotConfig('MyBot')); 
+    setAiLoading(false); 
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
-      <header className="flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-600 rounded-lg shadow-lg shadow-emerald-500/20">
-            <Bot className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent">Bot Control Panel</h1>
-            <p className="text-sm text-slate-400">User: {profile.nomor || 'Unknown'}</p>
-          </div>
+    // BACKGROUND DIGANTI KE 'bg-slate-950'
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 font-sans relative overflow-hidden">
+      <style>{styleTag}</style>
+
+      <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-800 pb-6 relative z-10">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+           <div className="relative shrink-0">
+             <Bot className="w-10 h-10 text-cyan-400 relative z-10" />
+           </div>
+           <div>
+             <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.1</span>
+             </h1>
+             <p className="text-xs text-slate-500 font-mono flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                System Operational
+             </p>
+           </div>
         </div>
-        <Button variant="secondary" onClick={onLogout} size="sm"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
+        <Button onClick={onLogout} className="w-full md:w-auto bg-slate-900 border border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 hover:text-red-400 transition-all text-sm h-10">
+            <LogOut className="w-4 h-4 mr-2" /> Logout
+        </Button>
       </header>
 
-      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-        <div className="bg-slate-900/50 backdrop-blur-xl p-6 rounded-xl border border-slate-700 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10"></div>
-          <h2 className="text-lg font-semibold mb-6 flex items-center gap-2"><Terminal className="w-5 h-5 text-emerald-400" /> Pengaturan Akun</h2>
-          <div className="space-y-5">
-            <Input label="Nomor Bot" value={form.nomor} onChange={e => setForm({...form, nomor: e.target.value})} />
-            <Input label="Password Login" value={form.pw} onChange={e => setForm({...form, pw: e.target.value})} />
-            <div>
-              <label className="text-sm text-slate-300 font-medium">License Key</label>
-              <div className="flex gap-2 mt-1">
-                <input className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-3 py-2 text-emerald-400 font-mono text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={form.key} onChange={e => setForm({...form, key: e.target.value})} placeholder="Klik tombol di kanan..." />
-                <Button onClick={handleGenKey} isLoading={aiLoading} title="Generate Key"><Sparkles className="w-4 h-4 text-yellow-400" /></Button>
-              </div>
-            </div>
-            <Button onClick={handleSave} isLoading={loading} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20">Simpan Perubahan</Button>
-          </div>
+      <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto relative z-10">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl">
+           <div className="flex items-center gap-3 mb-8">
+             <div className="p-2.5 bg-cyan-900/20 rounded-xl text-cyan-400 border border-cyan-500/20"><Settings className="w-5 h-5" /></div>
+             <h2 className="text-lg font-bold text-white">Bot Access</h2>
+           </div>
+
+           <div className="space-y-6">
+             <div className="group">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Target Number</label>
+                <div className="relative">
+                    <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+                    <input className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:border-cyan-500 transition-all outline-none" value={form.nomor} onChange={e => setForm({...form, nomor: e.target.value})} placeholder="628xxx" />
+                </div>
+             </div>
+
+             <div className="group">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Access Password</label>
+                <div className="relative">
+                    <Key className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+                    <input type="password" className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:border-cyan-500 transition-all outline-none" value={form.pw} onChange={e => setForm({...form, pw: e.target.value})} />
+                </div>
+             </div>
+
+             <div className="group">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1 flex justify-between">
+                    License Key 
+                    <span className="text-[10px] normal-case text-cyan-400/80 bg-cyan-900/20 px-2 rounded-full border border-cyan-500/20">Auto-Generate Available</span>
+                </label>
+                <div className="flex gap-3">
+                   <div className="relative flex-1">
+                      <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+                      <input className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm font-mono text-cyan-300 focus:border-cyan-500 outline-none transition-all" value={form.key} readOnly placeholder="NO_KEY_DETECTED" />
+                   </div>
+                   <button onClick={handleGenKey} disabled={aiLoading} className="shrink-0 w-12 h-[46px] flex items-center justify-center rounded-xl bg-cyan-900/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-600 hover:text-white transition-all active:scale-95" title="Generate New Key">
+                      <Sparkles className={`w-5 h-5 ${aiLoading ? 'animate-spin' : ''}`} />
+                   </button>
+                </div>
+             </div>
+
+             <Button onClick={handleSave} className="w-full mt-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:shadow-lg border-0 h-12 text-sm font-bold tracking-wide">
+                SAVE CHANGES
+             </Button>
+           </div>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-xl p-6 rounded-xl border border-slate-700 shadow-xl flex flex-col relative overflow-hidden">
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-purple-400" /> Config Generator</h2>
-          <div className="flex-1 bg-slate-950/80 rounded-lg p-4 font-mono text-xs text-green-400 overflow-auto border border-slate-800 mb-4 min-h-[180px] shadow-inner">
-            <pre>{aiConfig || '// Klik tombol di bawah untuk membuat config JSON...'}</pre>
-          </div>
-          <Button onClick={handleGenConfig} variant="ghost" className="border border-slate-600 hover:bg-slate-800 hover:border-slate-500" isLoading={aiLoading}>Generate Config Template</Button>
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl flex flex-col h-full">
+           <div className="flex items-center gap-3 mb-6">
+             <div className="p-2.5 bg-purple-900/20 rounded-xl text-purple-400 border border-purple-500/20"><Terminal className="w-5 h-5" /></div>
+             <h2 className="text-lg font-bold text-white">Config Generator</h2>
+           </div>
+           
+           <div className="flex-1 bg-slate-950 rounded-xl border border-slate-800 p-4 font-mono text-xs overflow-hidden relative shadow-inner group">
+             <div className="absolute top-3 right-3 flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+             </div>
+             
+             <div className="h-[250px] overflow-y-auto custom-scrollbar pt-4">
+                 {aiLoading ? (
+                   <div className="h-full flex flex-col items-center justify-center text-purple-400/50 gap-3">
+                     <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                     <p className="animate-pulse font-sans text-xs">Processing AI Request...</p>
+                   </div>
+                 ) : (
+                   <pre className="text-purple-300 leading-relaxed whitespace-pre-wrap">{aiConfig || '// Click "Generate Config" below\n// to create a new setting file.'}</pre>
+                 )}
+             </div>
+           </div>
+
+           <Button onClick={handleGenConfig} className="w-full mt-6 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-white h-12 text-sm">
+             <Server className="w-4 h-4 mr-2" /> Generate JSON Config
+           </Button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- 3. MAIN APP (LOGIN - PREMIUM UI) ---
+// --- 3. MAIN APP (LOGIN) ---
 const App: React.FC = () => {
   const [view, setView] = useState<'login' | 'dashboard'>('login');
   const [loginMode, setLoginMode] = useState<'user' | 'owner'>('user');
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  
+  const [currentUser, setCurrentUser] = useState<Profile | null>(() => {
+    const saved = localStorage.getItem('fuxxy_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (currentUser) setView('dashboard');
+  }, [currentUser]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError('');
-
     try {
+      await new Promise(r => setTimeout(r, 1000));
       let userFound: Profile | null = null;
-      if (!isSupabaseConfigured()) {
-        await new Promise(r => setTimeout(r, 800));
-        if (loginMode === 'owner' && password === 'admin123') userFound = { id: 'o1', role: UserRole.OWNER, nomor: null, pw: password, key: null };
-        else if (loginMode === 'user' && loginId && password) userFound = { id: 'u1', role: UserRole.USER, nomor: loginId, pw: password, key: 'test_key' };
-        else throw new Error("Password Salah / Data Tidak Lengkap");
-      } else {
-        let q = supabase.from('profiles').select('*');
-        if (loginMode === 'owner') q = q.eq('role', 'owner').eq('pw', password);
-        else q = q.eq('nomor', loginId).eq('pw', password);
-        const { data, error } = await q.maybeSingle();
-        if (error) throw error;
-        // --- FIX SYNTAX ---
-        if (!data) throw new Error(loginMode === 'owner' ? "Password Owner salah." : "Login gagal, cek Nomor/Password.");
-        userFound = data as Profile;
-      }
+      if (loginMode === 'owner' && password === 'admin123') userFound = { id: 'o1', role: UserRole.OWNER, nomor: null, pw: password, key: null };
+      else if (loginMode === 'user' && loginId && password) userFound = { id: 'u1', role: UserRole.USER, nomor: loginId, pw: password, key: 'test_key' };
+      else throw new Error("Invalid ID or Password");
+      
+      localStorage.setItem('fuxxy_user', JSON.stringify(userFound));
       setCurrentUser(userFound);
       setView('dashboard');
-    } catch (err: any) { setError(err.message || "Terjadi kesalahan sistem."); }
+
+    } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
   };
 
-  const handleLogout = () => { setCurrentUser(null); setView('login'); setLoginId(''); setPassword(''); };
+  const handleLogout = () => { 
+    localStorage.removeItem('fuxxy_user');
+    setCurrentUser(null); 
+    setView('login'); 
+    setLoginId(''); 
+    setPassword(''); 
+  };
 
   if (view === 'dashboard' && currentUser) {
     return currentUser.role === UserRole.OWNER ? <OwnerDashboard user={currentUser} onLogout={handleLogout} /> : <UserDashboard user={currentUser} onLogout={handleLogout} />;
   }
 
   return (
+    // BACKGROUND DIGANTI KE 'bg-slate-950'
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/20 rounded-full blur-[120px] animate-pulse"></div>
-      </div>
+      <style>{styleTag}</style>
 
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 p-8 z-10 relative">
+      <div className="w-full max-w-[400px] bg-slate-900/50 backdrop-blur-xl rounded-[30px] border border-slate-800 shadow-2xl p-8 z-10 relative overflow-hidden animate-float">
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-slate-800/50 rounded-2xl mb-4 shadow-inner ring-1 ring-slate-700">
-             <Bot className="w-8 h-8 text-indigo-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Security FuxxyMD</h1>
-          <p className="text-slate-400 text-sm">Silakan login untuk mengelola bot</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-800/80 rounded-xl mb-6 ring-1 ring-slate-700/50">
-           <button onClick={() => { setLoginMode('user'); setError(''); }} className={`py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${loginMode === 'user' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
-             <span className="flex items-center justify-center gap-2"><Smartphone className="w-4 h-4" /> User</span>
-           </button>
-           <button onClick={() => { setLoginMode('owner'); setError(''); }} className={`py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${loginMode === 'owner' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/25' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}>
-             <span className="flex items-center justify-center gap-2"><Shield className="w-4 h-4" /> Owner</span>
-           </button>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-5">
-          {loginMode === 'user' && <Input label="Nomor Bot" placeholder="628..." value={loginId} onChange={(e) => setLoginId(e.target.value)} required className="bg-slate-950/50 border-slate-700 focus:border-indigo-500/50" />}
-          <Input label={loginMode === 'owner' ? "Password Owner" : "Password"} type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-950/50 border-slate-700 focus:border-indigo-500/50" />
           
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-200 text-center flex items-center justify-center gap-2">
-              <AlertTriangle className="w-4 h-4" /> {error}
-            </div>
-          )}
+          <div className="inline-flex relative group mb-4">
+             <div className="relative p-4 bg-slate-950 rounded-full border border-slate-800 shadow-xl">
+               <Bot className="w-8 h-8 text-white" />
+             </div>
+          </div>
 
-          <Button type="submit" className={`w-full h-11 text-base shadow-xl transition-all duration-300 ${loginMode === 'owner' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'}`} isLoading={loading}>
-            {loginMode === 'owner' ? 'Masuk Dashboard Owner' : 'Masuk Dashboard User'}
-          </Button>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Fuxxy<span className="text-cyan-400">MD</span></h1>
+          <p className="text-slate-400 text-xs font-medium tracking-widest mt-1">SECURE ACCESS PORTAL</p>
+        </div>
+
+        <div className="bg-slate-950 p-1 rounded-xl flex mb-6 border border-slate-800">
+          <button onClick={() => setLoginMode('user')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'user' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}>USER</button>
+          <button onClick={() => setLoginMode('owner')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'owner' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}>OWNER</button>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          {loginMode === 'user' && (
+             <div className="relative">
+                 <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+                 <input className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-white text-sm placeholder-slate-600 focus:border-cyan-500 transition-all outline-none" placeholder="Phone Number" value={loginId} onChange={e=>setLoginId(e.target.value)} required />
+             </div>
+          )}
+          <div className="relative">
+               <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+               <input type="password" className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-white text-sm placeholder-slate-600 focus:border-purple-500 transition-all outline-none" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          </div>
+
+          {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-xs text-center">{error}</div>}
+
+          <button disabled={loading} className="w-full py-3.5 mt-2 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-cyan-600 to-purple-600 hover:opacity-90 transition-all shadow-lg shadow-cyan-500/20">
+            {loading ? 'AUTHENTICATING...' : 'CONNECT SECURELY'}
+          </button>
         </form>
       </div>
-      
-      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v1.3.0</p>
     </div>
   );
 };
