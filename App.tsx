@@ -139,11 +139,11 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <Shield className="w-8 h-8 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Command Center</h1>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Owner Area</h1>
             <p className="text-sm text-slate-400 font-medium">System Status: <span className="text-emerald-400">Online</span></p>
           </div>
         </div>
-        <Button variant="secondary" onClick={onLogout} className="bg-slate-900 border border-slate-700 hover:bg-slate-800"><LogOut className="w-4 h-4 mr-2" /> End Session</Button>
+        <Button variant="secondary" onClick={onLogout} className="bg-slate-900 border border-slate-700 hover:bg-slate-800"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 relative z-10">
@@ -170,7 +170,7 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                   <Input className="bg-slate-950 border-slate-800" label="Bot ID (WhatsApp)" value={formData.nomor} onChange={e => setFormData({...formData, nomor: e.target.value})} placeholder="628..." required />
                   <Input className="bg-slate-950 border-slate-800" label="Access Token" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} placeholder="Secret..." required />
-                  <Input className="bg-slate-950 border-slate-800" label="License Key" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Auto-generated" />
+                  <Input className="bg-slate-950 border-slate-800" label="License Key (Opsional)" value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} placeholder="Auto-generated" />
                 </div>
                 <div className="pt-2">
                   <Button type="submit" className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 border-0">
@@ -263,7 +263,7 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
            </div>
            <div>
              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.1</span>
+                User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.3</span>
              </h1>
              <p className="text-xs text-slate-500 font-mono flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
