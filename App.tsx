@@ -263,7 +263,7 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
            </div>
            <div>
              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.3</span>
+                User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.5</span>
              </h1>
              <p className="text-xs text-slate-500 font-mono flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -475,6 +475,7 @@ const App: React.FC = () => {
           </button>
         </form>
       </div>
+      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v2.5/p>
     </div>
   );
 };
