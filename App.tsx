@@ -14,7 +14,6 @@ const styleTag = `
     100% { transform: translateY(0px); }
   }
   .animate-float { animation: float 6s ease-in-out infinite; }
-  /* Scrollbar Keren */
   .custom-scrollbar::-webkit-scrollbar { width: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
@@ -49,8 +48,15 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         if (error) throw error;
         setUsers(data || []);
       } else {
-        // HANYA LOAD DATA DUMMY JIKA LIST KOSONG (Supaya data baru tidak tertimpa reset)
-        setUsers(prev => prev.length > 0 ? prev : [{ id: '1', role: UserRole.USER, nomor: '628xxx', pw: '123456', key: 'sk_test_123' }]);
+        // Ambil data dummy dari localStorage jika ada, kalau tidak pakai default
+        const savedUsers = localStorage.getItem('fuxxy_dummy_users');
+        if (savedUsers) {
+            setUsers(JSON.parse(savedUsers));
+        } else {
+            const defaultUser = [{ id: '1', role: UserRole.USER, nomor: '628xxx', pw: '123456', key: 'sk_test_123' }];
+            setUsers(defaultUser);
+            localStorage.setItem('fuxxy_dummy_users', JSON.stringify(defaultUser));
+        }
       }
     } catch (err: any) {
        console.error(err);
@@ -59,14 +65,14 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // --- LOGIKA SIMPAN USER (DIPERBAIKI UNTUK DEMO & LIVE) ---
+  // LOGIKA SIMPAN USER (DENGAN LOCALSTORAGE)
   const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (!isSupabaseConfigured()) {
-        // --- LOGIKA MODE DEMO (TANPA DB) ---
+        let newUsersList;
         if (isEditing) {
-          setUsers(prev => prev.map(u => u.id === formData.id ? { ...u, ...formData } : u));
+          newUsersList = users.map(u => u.id === formData.id ? { ...u, ...formData } : u);
         } else {
           const newUser: Profile = {
             id: Date.now().toString(),
@@ -75,33 +81,31 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             pw: formData.pw,
             key: formData.key
           };
-          setUsers(prev => [newUser, ...prev]); // Tambah ke paling atas
+          newUsersList = [newUser, ...users];
         }
-        alert(isEditing ? 'User updated (Demo)!' : 'User created (Demo)!');
+        setUsers(newUsersList);
+        localStorage.setItem('fuxxy_dummy_users', JSON.stringify(newUsersList));
+        alert(isEditing ? 'User updated!' : 'User created!');
       } else {
-        // --- LOGIKA MODE LIVE (SUPABASE) ---
         if (isEditing && formData.id) {
-          const { error } = await supabase.from('profiles').update({ nomor: formData.nomor, pw: formData.pw, key: formData.key }).eq('id', formData.id);
-          if (error) throw error;
+          await supabase.from('profiles').update({ nomor: formData.nomor, pw: formData.pw, key: formData.key }).eq('id', formData.id);
         } else {
-          const { error } = await supabase.from('profiles').insert([{ role: UserRole.USER, nomor: formData.nomor, pw: formData.pw, key: formData.key }]);
-          if (error) throw error;
+          await supabase.from('profiles').insert([{ role: UserRole.USER, nomor: formData.nomor, pw: formData.pw, key: formData.key }]);
         }
-        await fetchUsers(); // Refresh dari DB
+        await fetchUsers();
         alert('Success!');
       }
-      
       setFormData({ id: '', nomor: '', pw: '', key: '' });
       setIsEditing(false);
-    } catch (err: any) {
-      alert('Error: ' + err.message);
-    }
+    } catch (err: any) { alert('Error: ' + err.message); }
   };
 
   const handleDeleteUser = async (id: string) => {
     if (confirm('Hapus user ini?')) {
       if (!isSupabaseConfigured()) {
-        setUsers(prev => prev.filter(u => u.id !== id)); // Hapus lokal
+        const newUsersList = users.filter(u => u.id !== id);
+        setUsers(newUsersList);
+        localStorage.setItem('fuxxy_dummy_users', JSON.stringify(newUsersList));
       } else {
         await supabase.from('profiles').delete().eq('id', id);
         fetchUsers();
@@ -109,15 +113,20 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  // --- PERBAIKAN: UPDATE PASSWORD OWNER ---
   const handleUpdateOwnerPw = async () => {
     if (!ownerPw) return;
     setUpdatingOwner(true);
-    // Logika ganti password owner (simulasi atau real)
+    
+    // Simpan password baru ke LocalStorage
+    localStorage.setItem('fuxxy_owner_pw', ownerPw);
+    
+    // Simulasi loading
     setTimeout(() => {
-        alert('Password Owner updated!');
+        alert('Password Owner berhasil diubah! Silakan login ulang dengan password baru.');
         setOwnerPw('');
         setUpdatingOwner(false);
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -152,7 +161,6 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 items-start">
-        {/* KOLOM KIRI (Fixed Height tidak masalah) */}
         <div className="lg:col-span-1 space-y-6">
             <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
@@ -186,13 +194,11 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
         </div>
 
-        {/* KOLOM KANAN: LIST USER (DISINI PERBAIKAN SCROLLNYA) */}
         <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex flex-col h-[600px]">
           <div className="flex justify-between items-center mb-6 shrink-0">
             <h2 className="text-xl font-bold text-white">Active Users Database</h2>
           </div>
           
-          {/* CONTAINER TABEL: overflow-y-auto (Scroll Aktif) & flex-1 (Isi sisa ruang) */}
           <div className="flex-1 overflow-y-auto custom-scrollbar rounded-xl border border-slate-800 bg-slate-950/50 relative">
             <table className="w-full text-left text-sm relative">
               <thead className="bg-slate-900 text-slate-300 uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
@@ -375,9 +381,38 @@ const App: React.FC = () => {
     try {
       await new Promise(r => setTimeout(r, 1000));
       let userFound: Profile | null = null;
-      if (loginMode === 'owner' && password === 'admin123') userFound = { id: 'o1', role: UserRole.OWNER, nomor: null, pw: password, key: null };
-      else if (loginMode === 'user' && loginId && password) userFound = { id: 'u1', role: UserRole.USER, nomor: loginId, pw: password, key: 'test_key' };
-      else throw new Error("Invalid ID or Password");
+      
+      // AMBIL PASSWORD OWNER DARI STORAGE (Kalau ga ada, default admin123)
+      const currentOwnerPw = localStorage.getItem('fuxxy_owner_pw') || 'admin123';
+
+      if (!isSupabaseConfigured()) {
+        // --- LOGIKA LOGIN DEMO ---
+        if (loginMode === 'owner' && password === currentOwnerPw) {
+            userFound = { id: 'o1', role: UserRole.OWNER, nomor: null, pw: currentOwnerPw, key: null };
+        } 
+        else if (loginMode === 'user') {
+            // Cek di daftar user dummy
+            const dummyUsers = JSON.parse(localStorage.getItem('fuxxy_dummy_users') || '[]');
+            const found = dummyUsers.find((u: any) => u.nomor === loginId && u.pw === password);
+            
+            // Backdoor untuk test user
+            if (found) userFound = found;
+            else if (loginId === '628xxx' && password === '123456') userFound = { id: 'u1', role: UserRole.USER, nomor: loginId, pw: password, key: 'test_key' };
+            else throw new Error("Invalid ID or Password");
+        }
+        else {
+             throw new Error("Invalid ID or Password");
+        }
+      } else {
+        // --- LOGIKA LOGIN REAL ---
+        let q = supabase.from('profiles').select('*');
+        if (loginMode === 'owner') q = q.eq('role', 'owner').eq('pw', password);
+        else q = q.eq('nomor', loginId).eq('pw', password);
+        const { data, error } = await q.maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Credentials Invalid.");
+        userFound = data as Profile;
+      }
       
       localStorage.setItem('fuxxy_user', JSON.stringify(userFound));
       setCurrentUser(userFound);
