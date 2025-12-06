@@ -475,7 +475,7 @@ const App: React.FC = () => {
           </button>
         </form>
       </div>
-      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v2.5/p>
+      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by Security FuxxyMD • v2.5</p>
     </div>
   );
 };
