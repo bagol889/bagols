@@ -231,18 +231,28 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Users List</h3>
                 <div className="flex-1 overflow-y-auto custom-scrollbar rounded-xl border border-slate-800 bg-slate-950/50">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-900 text-slate-300 uppercase text-xs sticky top-0"><tr><th className="p-4">Number</th><th className="p-4">Password</th><th className="p-4 text-right">Action</th></tr></thead>
+                        <thead className="bg-slate-900 text-slate-300 uppercase text-xs sticky top-0"><tr><th className="p-4">Number</th><th className="p-4">Password</th><th className="p-4">License Status</th><th className="p-4 text-right">Action</th></tr></thead>
                         <tbody className="divide-y divide-slate-800">
-                            {users.map(u => (
+                            {users.map(u => {
+                                const isKeyActive = !!u.key; // Logika Sederhana: Aktif jika field 'key' ada nilainya
+                                return (
                                 <tr key={u.id} className="hover:bg-slate-900/40">
                                     <td className="p-4">{u.nomor}</td>
                                     <td className="p-4 text-cyan-300 font-mono">{u.pw}</td>
+                                    {/* Kolom Status License Key BARU */}
+                                    <td className="p-4">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isKeyActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                                            {isKeyActive ? <CheckCircle className="w-3 h-3 mr-1"/> : <X className="w-3 h-3 mr-1"/>}
+                                            {isKeyActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    {/* Akhir Kolom Status License Key */}
                                     <td className="p-4 text-right flex justify-end gap-2">
                                         <button onClick={() => { setIsEditingUser(true); setUserForm({id:u.id, nomor:u.nomor||'', pw:u.pw, key:u.key||''}); }} className="text-blue-400 bg-blue-500/10 p-2 rounded hover:bg-blue-500 hover:text-white"><Edit2 className="w-3 h-3"/></button>
                                         <button onClick={() => confirmUserDelete(u.id)} className="text-red-400 bg-red-500/10 p-2 rounded hover:bg-red-500 hover:text-white"><Trash2 className="w-3 h-3"/></button>
                                     </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                 </div>
@@ -293,7 +303,7 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* --- GLOBAL COMPONENTS UI --- */}
       
       {/* 1. TOAST NOTIFICATION */}
-      {toast.show && (
+{toast.show && (
         <div className="fixed bottom-6 right-6 z-[60] animate-slide-in">
             <div className={`backdrop-blur-xl border px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px] ${toast.type === 'error' ? 'bg-red-950/90 border-red-500/40 text-red-100' : 'bg-slate-900/95 border-emerald-500/40 text-white'}`}>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
@@ -338,11 +348,39 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [form, setForm] = useState({ nomor: user.nomor || '', pw: user.pw, key: user.key || '' });
   const [aiConfig, setAiConfig] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false); // State local untuk user dashboard
+  const [showToast, setShowToast] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
+  // Perubahan Logika Penyimpanan Data
   const handleSave = async () => { 
-    setShowToast(true);
-    setTimeout(() => { setShowToast(false); }, 2000); 
+    setLoading(true);
+    try {
+        if (isSupabaseConfigured()) {
+            // Update Supabase
+            await supabase.from('profiles').update({ 
+                nomor: form.nomor, 
+                pw: form.pw, 
+                key: form.key 
+            }).eq('id', user.id);
+        } else {
+            // Update Local Storage (Dummy)
+            const storedUsers = JSON.parse(localStorage.getItem('fuxxy_dummy_users') || '[]');
+            const updatedUsers = storedUsers.map((u: Profile) => 
+                u.id === user.id ? { ...u, nomor: form.nomor, pw: form.pw, key: form.key } : u
+            );
+            localStorage.setItem('fuxxy_dummy_users', JSON.stringify(updatedUsers));
+
+            // Update user di Local Storage untuk sesi saat ini
+            localStorage.setItem('fuxxy_user', JSON.stringify({ ...user, nomor: form.nomor, pw: form.pw, key: form.key }));
+        }
+        setShowToast(true);
+        setTimeout(() => { setShowToast(false); }, 2000); 
+    } catch (e) {
+        // Logika Error bisa ditambahkan di sini
+        console.error("Failed to save user data:", e);
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleGenKey = async () => { setAiLoading(true); const k = await generateBotKey(); setForm({ ...form, key: k }); setAiLoading(false); };
@@ -354,7 +392,7 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-800 pb-6 relative z-10">
         <div className="flex items-center gap-4 w-full md:w-auto">
            <div className="relative shrink-0"><Bot className="w-10 h-10 text-cyan-400 relative z-10" /></div>
-           <div><h1 className="text-xl font-bold text-white flex items-center gap-2">User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.7</span></h1><p className="text-xs text-slate-500 font-mono flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>System Operational</p></div>
+           <div><h1 className="text-xl font-bold text-white flex items-center gap-2">User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.8</span></h1><p className="text-xs text-slate-500 font-mono flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>System Operational</p></div>
         </div>
         <Button onClick={onLogout} className="w-full md:w-auto bg-slate-900 border border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 hover:text-red-400 transition-all text-sm h-10"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
       </header>
@@ -366,7 +404,7 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
              <div className="group"><label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Target Number</label><div className="relative"><Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" /><input className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:border-cyan-500 transition-all outline-none" value={form.nomor} onChange={e => setForm({...form, nomor: e.target.value})} placeholder="628xxx" /></div></div>
              <div className="group"><label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Access Password</label><div className="relative"><Key className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" /><input type="password" className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:border-cyan-500 transition-all outline-none" value={form.pw} onChange={e => setForm({...form, pw: e.target.value})} /></div></div>
              <div className="group"><label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1 flex justify-between">License Key <span className="text-[10px] normal-case text-cyan-400/80 bg-cyan-900/20 px-2 rounded-full border border-cyan-500/20">Manual / Auto</span></label><div className="flex gap-3"><div className="relative flex-1"><Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" /><input className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm font-mono text-cyan-300 focus:border-cyan-500 outline-none transition-all" value={form.key} onChange={e => setForm({...form, key: e.target.value})} placeholder="Paste Key Here..." /></div><button onClick={handleGenKey} disabled={aiLoading} className="shrink-0 w-12 h-[46px] flex items-center justify-center rounded-xl bg-cyan-900/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><Sparkles className={`w-5 h-5 ${aiLoading ? 'animate-spin' : ''}`} /></button></div></div>
-             <Button onClick={handleSave} className="w-full mt-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:shadow-lg border-0 h-12 text-sm font-bold tracking-wide">SAVE CHANGES</Button>
+             <Button onClick={handleSave} disabled={loading} className="w-full mt-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:shadow-lg border-0 h-12 text-sm font-bold tracking-wide">{loading ? 'SAVING...' : 'SAVE CHANGES'}</Button>
            </div>
         </div>
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl flex flex-col h-full">
@@ -445,7 +483,13 @@ const App: React.FC = () => {
       localStorage.setItem('fuxxy_user', JSON.stringify(userFound));
       setCurrentUser(userFound);
       setView('dashboard');
-    } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+        } catch (err: any) { 
+      setError(err.message);
+      setLoginId('');
+      setPassword('');
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleLogout = () => { localStorage.removeItem('fuxxy_user'); setCurrentUser(null); setView('login'); setLoginId(''); setPassword(''); };
@@ -481,7 +525,7 @@ const App: React.FC = () => {
         </form>
         {!isSupabaseConfigured() && loginMode === 'owner' && <p className="text-center text-[10px] text-slate-500 mt-4">Default Login: admin / 123456</p>}
       </div>
-      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by <span className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors cursor-default">Security FuxxyMD</span> • v2.7</p>
+      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by <span className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors cursor-default">Security FuxxyMD</span> • v2.8</p>
     </div>
   );
 };
