@@ -8,27 +8,24 @@ import { Shield, Users, Bot, LogOut, Terminal, Sparkles, Settings, Save, Edit2, 
 
 // --- STYLES & ANIMATIONS ---
 const styleTag = `
-  @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
+  @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
+  @keyframes electricEnter { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+  @keyframes glitchError { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); border-color: #ef4444; } 75% { transform: translateX(4px); border-color: #ef4444; } }
+  @keyframes recoilClick { 0% { transform: scale(1); } 50% { transform: scale(0.97); } 100% { transform: scale(1); } }
+  
+  /* ANIMASI SUKSES BARU */
+  @keyframes successExit { 
+    0% { transform: scale(1); border-color: #1e293b; } 
+    20% { transform: scale(1.05); border-color: #10b981; box-shadow: 0 0 25px rgba(16,185,129,0.3); } 
+    100% { transform: scale(0.9); opacity: 0; } 
   }
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes scaleUp {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .animate-float { animation: float 6s ease-in-out infinite; }
-  .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
-  .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-  .animate-scale-up { animation: scaleUp 0.3s ease-out forwards; }
+
+  .animate-float { animation: float 4s ease-in-out infinite; }
+  .animate-electric { animation: electricEnter 0.4s ease-out forwards; }
+  .animate-glitch { animation: glitchError 0.3s linear infinite; }
+  .animate-recoil { animation: recoilClick 0.15s ease-out forwards; }
+  .animate-success { animation: successExit 0.6s ease-in-out forwards; }
+
   .custom-scrollbar::-webkit-scrollbar { width: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
@@ -303,7 +300,7 @@ const OwnerDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* --- GLOBAL COMPONENTS UI --- */}
       
       {/* 1. TOAST NOTIFICATION */}
-{toast.show && (
+      {toast.show && (
         <div className="fixed bottom-6 right-6 z-[60] animate-slide-in">
             <div className={`backdrop-blur-xl border px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px] ${toast.type === 'error' ? 'bg-red-950/90 border-red-500/40 text-red-100' : 'bg-slate-900/95 border-emerald-500/40 text-white'}`}>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
@@ -392,7 +389,7 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-800 pb-6 relative z-10">
         <div className="flex items-center gap-4 w-full md:w-auto">
            <div className="relative shrink-0"><Bot className="w-10 h-10 text-cyan-400 relative z-10" /></div>
-           <div><h1 className="text-xl font-bold text-white flex items-center gap-2">User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v2.8</span></h1><p className="text-xs text-slate-500 font-mono flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>System Operational</p></div>
+           <div><h1 className="text-xl font-bold text-white flex items-center gap-2">User Area <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/30 text-cyan-400 border border-cyan-500/20">v3</span></h1><p className="text-xs text-slate-500 font-mono flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>System Operational</p></div>
         </div>
         <Button onClick={onLogout} className="w-full md:w-auto bg-slate-900 border border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 hover:text-red-400 transition-all text-sm h-10"><LogOut className="w-4 h-4 mr-2" /> Logout</Button>
       </header>
@@ -441,22 +438,30 @@ const UserDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 const App: React.FC = () => {
   const [view, setView] = useState<'login' | 'dashboard'>('login');
   const [loginMode, setLoginMode] = useState<'user' | 'owner'>('user');
-  
-  const [currentUser, setCurrentUser] = useState<Profile | null>(() => {
-    const saved = localStorage.getItem('fuxxy_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [cardEffect, setCardEffect] = useState<'float' | 'electric' | 'glitch' | 'recoil' | 'success'>('electric');
 
+  const [currentUser, setCurrentUser] = useState<Profile | null>(() => { const saved = localStorage.getItem('fuxxy_user'); return saved ? JSON.parse(saved) : null; });
   const [loginId, setLoginId] = useState(''); 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => { if (currentUser) setView('dashboard'); }, [currentUser]);
+  
+  // Efek masuk (electric) setiap kali halaman login muncul
+  useEffect(() => { 
+    if (view === 'login') {
+        setCardEffect('electric');
+        const timer = setTimeout(() => { setCardEffect('float'); }, 500); 
+        return () => clearTimeout(timer); 
+    }
+  }, [view]); // Ditambah dependency [view] biar jalan pas logout
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCardEffect('recoil');
     setLoading(true); setError('');
+    
     try {
       let userFound: Profile | null = null;
       if (isSupabaseConfigured()) {
@@ -480,52 +485,47 @@ const App: React.FC = () => {
               else throw new Error("Username atau Password Owner salah (Local).");
           }
       }
+      
+      setCardEffect('success'); 
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
       localStorage.setItem('fuxxy_user', JSON.stringify(userFound));
       setCurrentUser(userFound);
       setView('dashboard');
-        } catch (err: any) { 
-      setError(err.message);
-      setLoginId('');
-      setPassword('');
-    } finally { 
-      setLoading(false); 
-    }
+
+    } catch (err: any) { 
+      setCardEffect('glitch'); setTimeout(() => setCardEffect('float'), 300);
+      setError(err.message); setLoginId(''); setPassword('');
+    } finally { setLoading(false); }
   };
 
-  const handleLogout = () => { localStorage.removeItem('fuxxy_user'); setCurrentUser(null); setView('login'); setLoginId(''); setPassword(''); };
+  const handleLogout = () => { 
+      localStorage.removeItem('fuxxy_user'); 
+      setCurrentUser(null); 
+      setView('login'); 
+      setLoginId(''); 
+      setPassword('');
+      // --- FIX BUG DISINI: Reset animasi biar muncul lagi ---
+      setCardEffect('electric'); 
+  };
 
-  if (view === 'dashboard' && currentUser) {
-    return currentUser.role === UserRole.OWNER ? <OwnerDashboard user={currentUser} onLogout={handleLogout} /> : <UserDashboard user={currentUser} onLogout={handleLogout} />;
-  }
+  if (view === 'dashboard' && currentUser) { return currentUser.role === UserRole.OWNER ? <OwnerDashboard user={currentUser} onLogout={handleLogout} /> : <UserDashboard user={currentUser} onLogout={handleLogout} />; }
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       <style>{styleTag}</style>
-      <div className="w-full max-w-[400px] bg-slate-900/50 backdrop-blur-xl rounded-[30px] border border-slate-800 shadow-2xl p-8 z-10 relative overflow-hidden animate-float">
-        <div className="text-center mb-8">
-          <div className="inline-flex relative group mb-4"><div className="relative p-4 bg-slate-950 rounded-full border border-slate-800 shadow-xl"><Bot className="w-8 h-8 text-white" /></div></div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Fuxxy<span className="text-cyan-400">MD</span></h1>
-          <p className="text-slate-400 text-xs font-medium tracking-widest mt-1">SECURE ACCESS PORTAL</p>
-        </div>
-        <div className="bg-slate-950 p-1 rounded-xl flex mb-6 border border-slate-800">
-          <button onClick={() => { setLoginMode('user'); setLoginId(''); setPassword(''); }} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'user' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}>USER BOT</button>
-          <button onClick={() => { setLoginMode('owner'); setLoginId(''); setPassword(''); }} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'owner' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300'}`}>OWNER SYSTEM</button>
-        </div>
+      <div className={`w-full max-w-[400px] bg-slate-900/50 backdrop-blur-xl rounded-[30px] border border-slate-800 shadow-2xl p-8 z-10 relative overflow-hidden ${cardEffect === 'float' ? 'animate-float' : ''} ${cardEffect === 'electric' ? 'animate-electric' : ''} ${cardEffect === 'glitch' ? 'animate-glitch border-red-500/30' : ''} ${cardEffect === 'recoil' ? 'animate-recoil' : ''} ${cardEffect === 'success' ? 'animate-success' : ''} `}>
+        <div className="text-center mb-8"><div className="inline-flex relative group mb-4"><div className="relative p-4 bg-slate-950 rounded-full border border-slate-800 shadow-xl"><Bot className="w-8 h-8 text-white" /></div></div><h1 className="text-3xl font-bold text-white tracking-tight">Fuxxy<span className="text-cyan-400">MD</span></h1><p className="text-slate-400 text-xs font-medium tracking-widest mt-1">SECURE ACCESS PORTAL</p></div>
+        <div className="bg-slate-950 p-1 rounded-xl flex mb-6 border border-slate-800"><button onClick={() => { setLoginMode('user'); setLoginId(''); setPassword(''); }} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'user' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}>USER BOT</button><button onClick={() => { setLoginMode('owner'); setLoginId(''); setPassword(''); }} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${loginMode === 'owner' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300'}`}>OWNER SYSTEM</button></div>
         <form onSubmit={handleLogin} className="space-y-4">
-          <div className="relative">
-             {loginMode === 'user' ? <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" /> : <Shield className="absolute left-4 top-3.5 w-4 h-4 text-emerald-500" />}
-             <input className={`w-full bg-slate-950 border rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none transition-all ${loginMode === 'owner' ? 'border-emerald-500/30 focus:border-emerald-500 placeholder-emerald-700' : 'border-slate-800 placeholder-slate-600 focus:border-cyan-500'}`} placeholder={loginMode === 'user' ? "Phone Number" : "Owner Username"} value={loginId} onChange={e=>setLoginId(e.target.value)} required />
-          </div>
-          <div className="relative">
-               <Lock className={`absolute left-4 top-3.5 w-4 h-4 ${loginMode === 'owner' ? 'text-emerald-500' : 'text-slate-500'}`} />
-               <input type="password" className={`w-full bg-slate-950 border rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none transition-all ${loginMode === 'owner' ? 'border-emerald-500/30 focus:border-emerald-500 placeholder-emerald-700' : 'border-slate-800 placeholder-slate-600 focus:border-purple-500'}`} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-          </div>
+          <div className="relative">{loginMode === 'user' ? <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" /> : <Shield className="absolute left-4 top-3.5 w-4 h-4 text-emerald-500" />}<input className={`w-full bg-slate-950 border rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none transition-all ${loginMode === 'owner' ? 'border-emerald-500/30 focus:border-emerald-500 placeholder-emerald-700' : 'border-slate-800 placeholder-slate-600 focus:border-cyan-500'}`} placeholder={loginMode === 'user' ? "Phone Number" : "Owner Username"} value={loginId} onChange={e=>setLoginId(e.target.value)} required /></div>
+          <div className="relative"><Lock className={`absolute left-4 top-3.5 w-4 h-4 ${loginMode === 'owner' ? 'text-emerald-500' : 'text-slate-500'}`} /><input type="password" className={`w-full bg-slate-950 border rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none transition-all ${loginMode === 'owner' ? 'border-emerald-500/30 focus:border-emerald-500 placeholder-emerald-700' : 'border-slate-800 placeholder-slate-600 focus:border-purple-500'}`} placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required /></div>
           {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-xs text-center">{error}</div>}
           <button disabled={loading} className={`w-full py-3.5 mt-2 rounded-xl font-bold text-sm text-white transition-all shadow-lg ${loginMode === 'owner' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-cyan-600 to-purple-600 hover:opacity-90 shadow-cyan-500/20'}`}>{loading ? 'AUTHENTICATING...' : (loginMode === 'owner' ? 'ACCESS SYSTEM' : 'CONNECT SECURELY')}</button>
         </form>
         {!isSupabaseConfigured() && loginMode === 'owner' && <p className="text-center text-[10px] text-slate-500 mt-4">Default Login: admin / 123456</p>}
       </div>
-      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by <span className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors cursor-default">Security FuxxyMD</span> • v2.8</p>
+      <p className="mt-8 text-xs text-slate-600 font-mono">Powered by <span className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors cursor-default">Security FuxxyMD</span> • v3</p>
     </div>
   );
 };
